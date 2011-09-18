@@ -12,7 +12,7 @@ namespace Telnetd
     public class Program
     {
         private static readonly int _port = 9999;
-        private static readonly string _command = @"cmd.exe";
+        private static readonly string _command = "cmd.exe";
 
         static void Main(string[] args)
         {
@@ -80,6 +80,8 @@ namespace Telnetd
             }
             catch(ObjectDisposedException)
             {
+                stateObject.Socket.Close();
+                stateObject.Process.Close();
             }
         }
 
@@ -88,18 +90,27 @@ namespace Telnetd
             LocalStateObject localStateObject = (LocalStateObject)iAsyncResult.AsyncState;
             Socket socket = localStateObject.Socket;
             Stream stream = localStateObject.Stream;
-            int read = stream.EndRead(iAsyncResult);
-            if (0 < read)
+            try
             {
-                lock (socket)
+                int read = stream.EndRead(iAsyncResult);
+                if (0 < read)
                 {
-                    socket.Send(localStateObject.Buffer, read, 0);
+                    lock (socket)
+                    {
+                        socket.Send(localStateObject.Buffer, read, 0);
+                    }
+                    stream.BeginRead(localStateObject.Buffer, 0, LocalStateObject.BUFFER_SIZE, new AsyncCallback(LocalReadCallback), localStateObject);
                 }
-                stream.BeginRead(localStateObject.Buffer, 0, LocalStateObject.BUFFER_SIZE, new AsyncCallback(LocalReadCallback), localStateObject);
+                else
+                {
+                    stream.Close();
+                }
             }
-            else
+            catch (ObjectDisposedException)
             {
-                stream.Close();
+                localStateObject.Socket.Close();
+                localStateObject.Process.Close();
+                localStateObject.Stream.Close();
             }
         }
 
