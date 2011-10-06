@@ -99,6 +99,7 @@ namespace Telnetd
                 {
                     // Handle the received data and reassociate the call-back with the socket's BeginReceive().
                     StreamWriter streamWriter = stateObject.Process.StandardInput;
+                    string str = Encoding.ASCII.GetString(stateObject.Buffer, 0, read); // Debug.
                     nvt.Write(stateObject.Buffer, 0, read);
                     int r = nvt.Read(stateObject.Buffer, 0, read);
                     streamWriter.Write(Encoding.ASCII.GetString(stateObject.Buffer, 0, r));
@@ -132,6 +133,7 @@ namespace Telnetd
                 int read = stream.EndRead(iAsyncResult);
                 if (0 < read)
                 {
+                    string str = Encoding.ASCII.GetString(localStateObject.Buffer, 0, read); // Debug.
                     nvt.Write(localStateObject.Buffer, 0, read);
                     int r = nvt.Read(localStateObject.Buffer, 0, read);
                     // Lock the socket, just in case the other call-back wants to write at the same time.

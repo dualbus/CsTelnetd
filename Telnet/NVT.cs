@@ -11,6 +11,7 @@ namespace Telnetd
         private int _col;
         private int _total;
         private List<List<byte>> _lines;
+        private bool _trailing;
 
         public NVT()
         {
@@ -18,6 +19,7 @@ namespace Telnetd
             _col = 0;
             _total = 0;
             _lines = new List<List<byte>>();
+            _trailing = false;
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -40,6 +42,8 @@ namespace Telnetd
                         return read;
                     }
                 }
+                _lines.RemoveAt(0);
+                _row--;
                 if (0 < _row)
                 {
                     foreach (byte b in Environment.NewLine)
@@ -47,8 +51,14 @@ namespace Telnetd
                         buffer[offset++] = b;
                         read++;
                     }
-                    _lines.RemoveAt(0);
-                    _row--;
+                }
+            }
+            if (_trailing)
+            {
+                foreach (byte b in Environment.NewLine)
+                {
+                    buffer[offset++] = b;
+                    read++;
                 }
             }
             return read;
@@ -72,8 +82,10 @@ namespace Telnetd
 
         public override void Write(byte[] buffer, int offset, int count)
         {
+            string str = Encoding.ASCII.GetString(buffer, offset, count); // Debug.
             for (int i = offset, j = 0; j < count; i++, j++)
             {
+                _trailing = false;
                 byte b = buffer[i];
                 if ('\b' == b && 0 < _col)
                 {
@@ -82,6 +94,7 @@ namespace Telnetd
                 else if ('\n' == b)
                 {
                     _row++;
+                    _trailing = true;
                 }
                 else if ('\r' == b)
                 {
