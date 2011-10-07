@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Net;
@@ -91,6 +91,7 @@ namespace Telnetd
         {
             StateObject stateObject = (StateObject)iAsyncResult.AsyncState;
             Socket socket = stateObject.Socket;
+            NVT nvt = new NVT();
             try
             {
                 int read = socket.EndReceive(iAsyncResult);
@@ -98,7 +99,10 @@ namespace Telnetd
                 {
                     // Handle the received data and reassociate the call-back with the socket's BeginReceive().
                     StreamWriter streamWriter = stateObject.Process.StandardInput;
-                    streamWriter.Write(Encoding.UTF8.GetString(stateObject.Buffer, 0, read));
+                    string str = Encoding.ASCII.GetString(stateObject.Buffer, 0, read); // Debug.
+                    nvt.Write(stateObject.Buffer, 0, read);
+                    int r = nvt.Read(stateObject.Buffer, 0, read);
+                    streamWriter.Write(Encoding.ASCII.GetString(stateObject.Buffer, 0, r));
                     socket.BeginReceive(stateObject.Buffer, 0, StateObject.BUFFER_SIZE, 0, new AsyncCallback(ReadCallback), stateObject);
                 }
                 else
@@ -123,15 +127,19 @@ namespace Telnetd
             LocalStateObject localStateObject = (LocalStateObject)iAsyncResult.AsyncState;
             Socket socket = localStateObject.Socket;
             Stream stream = localStateObject.Stream;
+            NVT nvt = new NVT();
             try
             {
                 int read = stream.EndRead(iAsyncResult);
                 if (0 < read)
                 {
+                    string str = Encoding.ASCII.GetString(localStateObject.Buffer, 0, read); // Debug.
+                    nvt.Write(localStateObject.Buffer, 0, read);
+                    int r = nvt.Read(localStateObject.Buffer, 0, read);
                     // Lock the socket, just in case the other call-back wants to write at the same time.
                     lock (socket)
                     {
-                        socket.Send(localStateObject.Buffer, read, 0);
+                        socket.Send(localStateObject.Buffer, r, 0);
                     }
 
                     // Reassociate the stream's BeginRead() method with the LocalReadCallback().
